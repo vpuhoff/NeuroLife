@@ -24,6 +24,7 @@ namespace AVI
         }
         static public void AddFrame(Bitmap frame)
        {
+           
            writer.WriteVideoFrame(frame);
        }
 

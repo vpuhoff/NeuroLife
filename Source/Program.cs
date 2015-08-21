@@ -28,37 +28,184 @@ namespace EncogExample
             double sL, sR, sB, sT = 0.0; //значения сенсоров
             public int nearcount=0; //число, количество сближений данного объекта с другими (аналог, учавствовал в бою, выжил, стал сильней) - показатель силы
             public int borncount = 0; //число съеденных данным объектом - показатель силы
+            public int borntimeout = 0;
+            public int starttimeout = 0;
+            public List<LayerConfig> genotype = new List<LayerConfig>();
             public double x { get; set; } 
             public double y { get; set; }
             public string id = Guid.NewGuid().ToString();
             BasicNetwork network = new BasicNetwork();
             Random rnd = new Random((int)(DateTime.Now.Ticks%int.MaxValue ) );
             List<Life> World; 
-            public Life(List<Life> world,double X,double Y)
+            public Life(List<Life> world,double X,double Y, List<LayerConfig> newgen=null, Life parent=null  )
             {
                 x = X;
                 y = Y;
                 pL = pR = pB = pT = 0.0; 
                 sL = sR = sB = sT = 0.0;
                 network.AddLayer(new BasicLayer(null, true, 4)); //создание простой многослойной нейронной сети
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), false, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), false, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), false, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), false, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), false, rnd.Next(100) + 10));
-                network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
+               
+                if (newgen ==null )
+                {
+                    int maxlayers = 3 + rnd.Next(15);
+                    for (int i = 0; i < maxlayers; i++)
+                    {
+                        bool bias = rnd.NextDouble() >= 0.5;
+                        var layer = new LayerConfig((byte)rnd.Next(0, 16), bias, rnd.Next(100) + 10);
+                        genotype.Add(layer);
+                    }
+                }
+                else
+                {
+                    genotype = Mutate(newgen);
+                }
+
+                AddLayers(genotype);
+                if (parent!=null )
+                {
+                    for (int i = 0; i < parent.Memory.Count ; i++)
+                    {
+                        if (rnd.NextDouble()>0.5)
+                        {
+                            Memory.Add(parent.Memory[i]);
+                            MemorySense.Add(parent.MemorySense[i]);
+                        }
+                    }
+                }
+                //network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationSigmoid(), false, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationSoftMax(), false, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationSoftMax (), true, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationSoftMax(), false, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationSoftMax(), true, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationStep (), false, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationStep(), true, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationStep(), false, rnd.Next(100) + 10));
+                //network.AddLayer(new BasicLayer(new ActivationSigmoid(), true, rnd.Next(100) + 10));
                 network.AddLayer(new BasicLayer(new ActivationSigmoid(), false, 4));
+                
                 network.Structure.FinalizeStructure();
                 network.Reset();
                 World = world;
             }
             List<double[]> Memory = new List<double[]>();
             List<double[]> MemorySense = new List<double[]>();
+            
+            public class LayerConfig
+	        {
+		        public byte ActivationType;
+                public bool hasBias;
+                public int neurons;
+                public LayerConfig(byte atype, bool hasbias, int neuronscount)
+                {
+                    ActivationType = atype;
+                    hasBias = hasbias;
+                    neurons = neuronscount;
+                }
+	        }
+
+            List<LayerConfig> Mutate(List<LayerConfig> gen)
+            {
+                List<LayerConfig> newgen = new List<LayerConfig>();
+                foreach (var g in gen)
+                {
+                    newgen.Add(g);
+                }
+                if (newgen.Count >3)
+                {
+                    if (rnd.NextDouble()>0.9)
+                    {
+                        newgen.RemoveAt(rnd.Next(newgen.Count));
+                    }
+                }
+                if (rnd.NextDouble() > 0.90)
+                {
+                    bool bias = rnd.NextDouble() >= 0.5;
+                    var layer = new LayerConfig((byte)rnd.Next(0, 16), bias, rnd.Next(100) + 5);
+                    newgen.Insert(rnd.Next(newgen.Count), layer);
+                }
+                foreach (var g in newgen)
+                {
+                    g.neurons += rnd.Next(g.neurons / 10);
+                    g.neurons -= rnd.Next(g.neurons / 10);
+                    if (rnd.NextDouble() > 0.90)
+                    {
+                        bool bias = rnd.NextDouble() >= 0.5;
+                        g.hasBias = bias;
+                    }
+                }
+                return newgen;
+            }
+            void AddLayers(List<LayerConfig> gen){
+               
+                foreach (var g in gen)
+	            {
+		            IActivationFunction act;
+                    if (g.ActivationType == 0)
+	                {
+		                act = new ActivationBiPolar();
+	                }
+                    switch (g.ActivationType )
+                    {
+                        case 0:
+                            act = new ActivationBiPolar();
+                            break;
+                        case 1:
+                            act = new ActivationBipolarSteepenedSigmoid ();
+                            break;
+                        case 2:
+                            act = new ActivationClippedLinear();
+                            break;
+                        case 3:
+                            act = new ActivationCompetitive();
+                            break;
+                        case 4:
+                            act = new ActivationElliott();
+                            break;
+                        case 5:
+                            act = new ActivationElliottSymmetric();
+                            break;
+                        case 6:
+                            act = new ActivationGaussian();
+                            break;
+                        case 7:
+                            act = new ActivationLinear();
+                            break;
+                        case 8:
+                            act = new ActivationLOG();
+                            break;
+                        case 9:
+                            act = new ActivationRamp();
+                            break;
+                        case 10:
+                            act = new ActivationRamp();
+                            break;
+                        case 11:
+                            act = new ActivationSigmoid();
+                            break;
+                        case 12:
+                            act = new ActivationSIN();
+                            break;
+                        case 13:
+                            act = new ActivationSoftMax();
+                            break;
+                        case 14:
+                            act = new ActivationSteepenedSigmoid();
+                            break;
+                        case 15:
+                            act = new ActivationStep();
+                            break;
+                        case 16:
+                            act = new ActivationTANH();
+                            break;
+                        default:
+                            act = new ActivationSoftMax();
+                            break;
+                    }
+                    network.AddLayer(new BasicLayer(act, g.hasBias, g.neurons));
+	            }
+            }
 
             void Train()
             {
@@ -81,7 +228,18 @@ namespace EncogExample
                     double d = 999;
                     do
                     {
-                        train.Iteration();
+                        try
+                        {
+                            train.Iteration();
+                        }
+                        catch (Exception)
+                        {
+                            World.Remove(this);
+                            Life newlife = new Life(World, x, y);
+                            World.Add(newlife);
+                            break;
+                        }
+                       
                         //Console.SetCursorPosition(0, 0); //вывод информации о текущем состоянии обучения
                         //Console.Write(@"Epoch #" + epoch + @" Error:" + train.Error);
                         epoch++;
@@ -107,7 +265,7 @@ namespace EncogExample
                 double[] SenseData = { pL, pR, pB, pT };
                 Memory.Add(Data);
                 MemorySense.Add(SenseData);
-                if (Memory.Count > 1000)
+                if (Memory.Count > 2000)
                 {
                     if (nearcount==0)
                     {
@@ -129,6 +287,8 @@ namespace EncogExample
                 RefreshSense(); //look around
                 Move();//do step
                 step++;
+                borntimeout++;
+                starttimeout++;
                 if (step>stepmax )
                 {
                     int maxstep = 5-(int)(sL + sR + sB + sT);
@@ -141,22 +301,26 @@ namespace EncogExample
                 IMLDataSet trainingSet;
                 //thinking
                 //если я тот кто ближе слабее попробовать съесть, если нет драпать
-                if (nearlife.borncount > borncount )
+                if (nearlife!=null )
                 {
-                    double[][] SenseData = { new double[] { 0, 0, 0, 0 } };
-                    trainingSet = new BasicMLDataSet(Input, SenseData);
+                    if (nearlife.borncount > borncount)
+                    {
+                        double[][] SenseData = { new double[] { 0, 0, 0, 0 } };
+                        trainingSet = new BasicMLDataSet(Input, SenseData);
+                    }
+                    else
+                    {
+                        double[][] SenseData = { new double[] { 1, 1, 1, 1 } };
+                        trainingSet = new BasicMLDataSet(Input, SenseData);
+                    }
+                    IMLData output = network.Compute(trainingSet[0].Ideal);
+                    if (output[0] > pL) { pL += 0.001; } else { pL -= 0.001; }
+                    if (output[1] > pR) { pR += 0.001; } else { pR -= 0.001; }
+                    if (output[2] > pB) { pB += 0.001; } else { pB -= 0.001; }
+                    if (output[3] > pT) { pT += 0.001; } else { pT -= 0.001; }
                 }
-                else
-                {
-                    double[][] SenseData = { new double[] { 1, 1, 1, 1 } };
-                    trainingSet = new BasicMLDataSet(Input, SenseData);
-                }
-                IMLData output = network.Compute(trainingSet[0].Ideal   );
-                if (output[0] > pL) { pL += 0.001; } else { pL -= 0.001; }
-                if (output[1] > pR) { pR += 0.001; } else { pR -= 0.001; }
-                if (output[2] > pB) { pB += 0.001; } else { pB -= 0.001; }
-                if (output[3] > pT) { pT += 0.001; } else { pT -= 0.001; }
-               
+              
+                
             }
 
             
@@ -218,7 +382,10 @@ namespace EncogExample
             void RefreshSense()
             {
                ret1: double mind = 99999;
-
+                sL = 0;
+                sR = 0;
+                sB = 0;
+                sT = 0;
                try
                {
                    foreach (Life life in World)
@@ -232,31 +399,69 @@ namespace EncogExample
                                nearlife = life;
                                if (d < 0.008)
                                {
-                                   if (rnd.NextDouble() > 0.5)//born new life form 60%
+
+                                   if (rnd.NextDouble() > 0.7)//born new life form 70%
                                    {
-                                       //Life newlife = new Life(World, x , y );
-                                       //world.Add(newlife);
-                                       borncount += 1;
-                                       if (borncount > 5)
+                                       if (starttimeout > 30)
                                        {
-                                           borncount = 5;
+                                           if (nearlife.starttimeout > 30)
+                                           {
+                                               borncount += 1;
+                                               if (borncount > 5)
+                                               {
+                                                   borncount = 5;
+                                               }
+                                               nearlife.borncount += 1;
+                                               if (nearlife.borncount > 5)
+                                               {
+                                                   nearlife.borncount = 5;
+                                               }
+                                               if (nearlife.nearcount < nearcount)
+                                               {
+                                                   World.Remove(nearlife);
+                                               }
+                                               else
+                                               {
+                                                   World.Remove(this);
+                                               }
+                                               //World.Remove(nearlife);
+                                               //World.Remove(this);
+                                               goto ret1;
+                                           }
+
                                        }
-                                       nearlife.borncount += 1;
-                                       if (nearlife.borncount > 5)
+                                      
+                                   }
+                                   else
+                                   {
+                                       if (borntimeout>10)
                                        {
-                                           nearlife.borncount = 5;
+                                           if (nearlife.borntimeout >  10)
+                                           {
+                                               borntimeout = 0;
+                                               nearlife.borntimeout = 0;
+                                               if (nearlife.nearcount < nearcount)
+                                               {
+                                                   Life newlife = new Life(World, x + rnd.NextDouble() / 20 - rnd.NextDouble() / 20, y + rnd.NextDouble() / 20 - rnd.NextDouble() / 20, genotype ,this );
+                                                   world.Add(newlife);
+                                               }
+                                               else
+                                               {
+                                                   Life newlife = new Life(World, x + rnd.NextDouble() / 20 - rnd.NextDouble() / 20, y + rnd.NextDouble() / 20 - rnd.NextDouble() / 20,nearlife.genotype,nearlife  );
+                                                   world.Add(newlife);
+                                               }
+                                               borncount -= 1;
+                                               if (borncount < 0)
+                                               {
+                                                   borncount = 0;
+                                               }
+                                               nearlife.borncount -= 1;
+                                               if (nearlife.borncount < 0)
+                                               {
+                                                   nearlife.borncount = 0;
+                                               }
+                                           }
                                        }
-                                       if (nearlife.nearcount < nearcount)
-                                       {
-                                           World.Remove(nearlife);
-                                       }
-                                       else
-                                       {
-                                           World.Remove(this);
-                                       }
-                                       //World.Remove(nearlife);
-                                       //World.Remove(this);
-                                       goto ret1;
                                    }
                                    nearcount += 1;
                                    if (nearcount > 5)
@@ -274,21 +479,40 @@ namespace EncogExample
                                    //life.y = (rnd.NextDouble() + 0.04 + life.y) / 2;
                                }
                            }
+                           if (nearlife != null)
+                           {
+                               if (nearlife.borncount<borncount )
+                               {
+                                   sL += Math.Pow (GetDist(x - 0.05, nearlife.x, y, nearlife.y) , 2) / 10;
+                                   sR += Math.Pow (GetDist(x + 0.05, nearlife.x, y, nearlife.y) , 2) / 10;
+                                   sB += Math.Pow ( GetDist(x, nearlife.x, y - 0.05, nearlife.y) , 2) / 10;
+                                   sT += Math.Pow ( GetDist(x, nearlife.x, y + 0.05, nearlife.y) , 2) / 10;
+                               }
+                               else
+                               {
+                                   sL -= Math.Pow (GetDist(x - 0.05, nearlife.x, y, nearlife.y) , 2) / 10;
+                                   sR -= Math.Pow (GetDist(x + 0.05, nearlife.x, y, nearlife.y) , 2) / 10;
+                                   sB -= Math.Pow (GetDist(x, nearlife.x, y - 0.05, nearlife.y) , 2) / 10;
+                                   sT -= Math.Pow (GetDist(x, nearlife.x, y + 0.05, nearlife.y) , 2) / 10;
+                               }
+                              
+                           }
                        }
                    }
                }
-               catch (Exception)
+               catch (Exception ee)
                {
+                   string s = ee.Message;
+
                    goto ret1;
                }
-                
-                if (nearlife != null)
-                {
-                    sL = GetDist(x - 0.05, nearlife.x, y, nearlife.y);
-                    sR = GetDist(x + 0.05, nearlife.x, y, nearlife.y);
-                    sB = GetDist(x, nearlife.x, y - 0.05, nearlife.y);
-                    sT = GetDist(x, nearlife.x, y + 0.05, nearlife.y);
-                }
+               if (nearlife != null)
+               {
+                   sL = GetDist(x - 0.05, nearlife.x, y, nearlife.y) + sL / 10;
+                   sR = GetDist(x + 0.05, nearlife.x, y, nearlife.y) + sR / 10;
+                   sB = GetDist(x, nearlife.x, y - 0.05, nearlife.y) + sB / 10;
+                   sT = GetDist(x, nearlife.x, y + 0.05, nearlife.y) + sT / 10;
+               }
             }
 
             double GetDistLife(Life l1)
@@ -379,14 +603,14 @@ namespace EncogExample
             // create a neural network, without using a factory
             Random rnd = new Random((int)(DateTime.Now.Ticks % int.MaxValue));
 
-            for (int i = 0; i < 35; i++)
+            for (int i = 0; i < 23; i++)
             {
                 Life life = new Life(world, rnd.NextDouble(), rnd.NextDouble());
                 world.Add(life);
             }
           
-            int width = 1280;
-            int height = 1024;
+            int width = 640;
+            int height = 480;
             frame = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             string name = String.Format("{0}.avi", DateTime.Now.ToString());
             String outputFilePath = name.Replace(":", "_") ;
@@ -457,6 +681,7 @@ namespace EncogExample
                     //break;
                 }
             } while (true);
+
             EncogFramework.Instance.Shutdown();
         }
     }

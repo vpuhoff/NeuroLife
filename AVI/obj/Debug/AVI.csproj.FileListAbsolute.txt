@@ -16,3 +16,13 @@ I:\BigLifeGif\777\AVI\bin\Debug\AForge.Video.FFMPEG.xml
 I:\BigLifeGif\777\AVI\obj\Debug\AVI.csprojResolveAssemblyReference.cache
 I:\BigLifeGif\777\AVI\obj\Debug\AVI.dll
 I:\BigLifeGif\777\AVI\obj\Debug\AVI.pdb
+I:\Разработки\NeuroLife\AVI\bin\Debug\AVI.dll
+I:\Разработки\NeuroLife\AVI\bin\Debug\AVI.pdb
+I:\Разработки\NeuroLife\AVI\bin\Debug\AForge.dll
+I:\Разработки\NeuroLife\AVI\bin\Debug\AForge.Video.dll
+I:\Разработки\NeuroLife\AVI\bin\Debug\AForge.xml
+I:\Разработки\NeuroLife\AVI\bin\Debug\AForge.Video.xml
+I:\Разработки\NeuroLife\AVI\bin\Debug\AForge.Video.FFMPEG.xml
+I:\Разработки\NeuroLife\AVI\obj\Debug\AVI.csprojResolveAssemblyReference.cache
+I:\Разработки\NeuroLife\AVI\obj\Debug\AVI.dll
+I:\Разработки\NeuroLife\AVI\obj\Debug\AVI.pdb
